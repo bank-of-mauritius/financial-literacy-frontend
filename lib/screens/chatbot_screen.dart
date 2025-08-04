@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
@@ -10,10 +11,10 @@ class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
 
   @override
-  ChatbotScreenState createState() => ChatbotScreenState();
+  State<ChatbotScreen> createState() => _ChatbotScreenState();
 }
 
-class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMixin {
+class _ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late AnimationController _slideController;
@@ -27,15 +28,19 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
     'How to create a budget?',
     'Investment basics',
     'Debt management tips',
+    'What is an emergency fund?',
+    'How to improve credit score?',
   ];
 
   @override
   void initState() {
     super.initState();
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
+
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -58,6 +63,13 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
     ));
 
     _slideController.forward();
+
+    // Check connection and add welcome message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chatbotProvider = Provider.of<ChatbotProvider>(context, listen: false);
+      chatbotProvider.checkConnection();
+      chatbotProvider.addWelcomeMessage();
+    });
   }
 
   @override
@@ -70,169 +82,26 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
   }
 
   void _sendMessage(String text) {
+    if (text.trim().isEmpty) return;
+
     final chatbotProvider = Provider.of<ChatbotProvider>(context, listen: false);
-    chatbotProvider.sendMessage(text);
+    chatbotProvider.sendMessage(text.trim());
     _controller.clear();
 
     // Auto-scroll to bottom after a short delay
     Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent + 100,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      _scrollToBottom();
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final chatbotProvider = Provider.of<ChatbotProvider>(context);
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        builder: (_, controller) => Container(
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildMessagesList(chatbotProvider),
-              _buildInputSection(chatbotProvider),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary,
-            AppColors.primary.withOpacity(0.8),
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Drag handle
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Header content
-            Row(
-              children: [
-                // AI Avatar with pulse animation
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _pulseAnimation.value,
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.7)],
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.secondary.withOpacity(0.3),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          MdiIcons.robot,
-                          color: AppColors.white,
-                          size: 20,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Finance AI Assistant',
-                        style: AppTypography.h4.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Online',
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.white.withOpacity(0.8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                // Close button
-                Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent + 100,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Widget _buildMessagesList(ChatbotProvider chatbotProvider) {
@@ -264,7 +133,7 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
           height: 80,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.primary.withOpacity(0.1), AppColors.secondary.withOpacity(0.1)],
+              colors: [AppColors.primaryLight.withOpacity(0.1), AppColors.secondaryLight.withOpacity(0.1)],
             ),
             shape: BoxShape.circle,
           ),
@@ -306,29 +175,32 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: quickSuggestions.map((suggestion) {
-            return GestureDetector(
-              onTap: () => _sendMessage(suggestion),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                ),
-                child: Text(
-                  suggestion,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w500,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: quickSuggestions.map((suggestion) {
+              return GestureDetector(
+                onTap: () => _sendMessage(suggestion),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.accent.withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    suggestion,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
@@ -336,6 +208,8 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
 
   Widget _buildMessageBubble(dynamic message, int index) {
     final isUser = message.isUser;
+    final isError = message.isError ?? false;
+    final isSystemMessage = message.isSystemMessage ?? false;
 
     return TweenAnimationBuilder(
       duration: Duration(milliseconds: 300 + (index * 100)),
@@ -359,19 +233,30 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                 decoration: BoxDecoration(
                   gradient: isUser
                       ? LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                    colors: [AppColors.primary, AppColors.primaryLight],
                   )
                       : null,
-                  color: isUser ? null : AppColors.white,
+                  color: isUser
+                      ? null
+                      : isError
+                      ? AppColors.errorLight
+                      : isSystemMessage
+                      ? AppColors.secondaryLight.withOpacity(0.1)
+                      : AppColors.surface,
                   borderRadius: BorderRadius.circular(18).copyWith(
                     bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(18),
                     bottomLeft: isUser ? const Radius.circular(18) : const Radius.circular(4),
                   ),
+                  border: isError
+                      ? Border.all(color: AppColors.error)
+                      : isSystemMessage
+                      ? Border.all(color: AppColors.secondaryLight.withOpacity(0.3))
+                      : null,
                   boxShadow: [
                     BoxShadow(
                       color: isUser
                           ? AppColors.primary.withOpacity(0.2)
-                          : Colors.black.withOpacity(0.05),
+                          : AppColors.gray.withOpacity(0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -384,15 +269,31 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                       Row(
                         children: [
                           Icon(
-                            MdiIcons.robot,
-                            color: AppColors.primary,
+                            isError
+                                ? Icons.error_outline
+                                : isSystemMessage
+                                ? MdiIcons.information
+                                : MdiIcons.robot,
+                            color: isError
+                                ? AppColors.error
+                                : isSystemMessage
+                                ? AppColors.secondary
+                                : AppColors.primary,
                             size: 14,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'AI Assistant',
+                            isError
+                                ? 'Error'
+                                : isSystemMessage
+                                ? 'System'
+                                : 'AI Assistant',
                             style: AppTypography.caption.copyWith(
-                              color: AppColors.primary,
+                              color: isError
+                                  ? AppColors.error
+                                  : isSystemMessage
+                                  ? AppColors.secondary
+                                  : AppColors.primary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -402,10 +303,37 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                     Text(
                       message.text,
                       style: AppTypography.body1.copyWith(
-                        color: isUser ? AppColors.white : AppColors.text,
+                        color: isUser
+                            ? AppColors.white
+                            : isError
+                            ? AppColors.error
+                            : AppColors.text,
                         height: 1.4,
                       ),
                     ),
+                    // Show confidence score for AI messages
+                    if (!isUser && message.confidenceScore != null && !isError && !isSystemMessage)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.analytics_outlined,
+                              size: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Confidence: ${(message.confidenceScore * 100).toInt()}%',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -423,13 +351,13 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18).copyWith(
             bottomLeft: const Radius.circular(4),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: AppColors.gray.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -464,8 +392,8 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                             child: Container(
                               width: 6,
                               height: 6,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
+                              decoration: const BoxDecoration(
+                                color: AppColors.accent,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -487,10 +415,10 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: AppColors.gray.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -504,18 +432,31 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: AppColors.errorLight,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.red.shade200),
+                  border: Border.all(color: AppColors.error),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red.shade600, size: 20),
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         chatbotProvider.error!,
-                        style: AppTypography.caption.copyWith(color: Colors.red.shade700),
+                        style: AppTypography.caption.copyWith(color: AppColors.error),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        chatbotProvider.clearError();
+                        chatbotProvider.retryLastMessage();
+                      },
+                      child: Text(
+                        'Retry',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],
@@ -527,29 +468,23 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.background,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(25),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.borderLight),
                     ),
                     child: TextField(
                       controller: _controller,
                       maxLines: null,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: 'Ask about finance...',
-                        hintStyle: AppTypography.body1.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
+                      enabled: !chatbotProvider.isLoading,
                       onSubmitted: (text) {
-                        if (text.trim().isNotEmpty) {
+                        if (text.trim().isNotEmpty && chatbotProvider.isConnected) {
                           _sendMessage(text.trim());
                         }
+                      },
+                      onChanged: (value) {
+                        // Force rebuild to update button state
+                        setState(() {});
                       },
                     ),
                   ),
@@ -557,8 +492,8 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                 const SizedBox(width: 12),
                 Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.8)],
+                    gradient: const LinearGradient(
+                      colors: [AppColors.secondary, AppColors.secondaryLight],
                     ),
                     shape: BoxShape.circle,
                     boxShadow: [
@@ -570,11 +505,24 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
                     ],
                   ),
                   child: IconButton(
-                    onPressed: _controller.text.trim().isNotEmpty && !chatbotProvider.isLoading
-                        ? () => _sendMessage(_controller.text.trim())
-                        : null,
+                    onPressed: () {
+                      // Debug print to check conditions
+                      if (_controller.text.trim().isNotEmpty &&
+                          !chatbotProvider.isLoading &&
+                          chatbotProvider.isConnected) {
+                        _sendMessage(_controller.text.trim());
+                      } else {
+                        if (kDebugMode) {
+                          print('Send button disabled due to conditions not met');
+                        }
+                      }
+                    },
                     icon: Icon(
-                      chatbotProvider.isLoading ? MdiIcons.loading : Icons.send,
+                      chatbotProvider.isLoading
+                          ? MdiIcons.loading
+                          : !chatbotProvider.isConnected
+                          ? Icons.wifi_off
+                          : Icons.send,
                       color: AppColors.white,
                     ),
                   ),
@@ -582,6 +530,168 @@ class ChatbotScreenState extends State<ChatbotScreen> with TickerProviderStateMi
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ChatbotProvider chatbotProvider) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary,
+            AppColors.primaryLight,
+          ],
+        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Header content
+            Row(
+              children: [
+                // AI Avatar with pulse animation
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.secondary, AppColors.secondaryLight],
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.secondary.withOpacity(0.3),
+                              blurRadius: 8,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          MdiIcons.robot,
+                          color: AppColors.white,
+                          size: 20,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finance AI Assistant',
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: chatbotProvider.isConnected ? AppColors.success : AppColors.error,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            chatbotProvider.isConnected ? 'Online' : 'Offline',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.white.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Retry connection button
+                if (!chatbotProvider.isConnected)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh, color: AppColors.white),
+                      onPressed: () => chatbotProvider.checkConnection(),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                // Close button
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final chatbotProvider = Provider.of<ChatbotProvider>(context);
+
+    return SlideTransition(
+      position: _slideAnimation,
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.gray.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildHeader(chatbotProvider),
+              _buildMessagesList(chatbotProvider),
+              _buildInputSection(chatbotProvider),
+            ],
+          ),
         ),
       ),
     );

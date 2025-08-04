@@ -13,10 +13,43 @@ class QuizScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final quizProvider = Provider.of<QuizProvider>(context);
-    final quizId = ModalRoute.of(context)!.settings.arguments as int;
+    final dynamic arguments = ModalRoute.of(context)!.settings.arguments;
+
+    // Handle null or invalid quizId
+    if (arguments == null || arguments is! int) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No quiz selected. Returning to home.',
+              style: AppTypography.body2.copyWith(color: AppColors.white),
+            ),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      });
+      return const Scaffold(body: LoadingSpinner());
+    }
+
+    final int quizId = arguments;
+
+    // Fetch quiz if not already loaded
+    if (quizProvider.currentQuiz == null || quizProvider.currentQuiz!.id != quizId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        quizProvider.fetchQuizById(quizId);
+      });
+    }
 
     return Scaffold(
-      appBar: AppBar(title: Text(quizProvider.currentQuiz?.title ?? 'Quiz', style: AppTypography.h3, selectionColor: AppColors.white), backgroundColor: AppColors.primary),
+      appBar: AppBar(
+        title: Text(
+          quizProvider.currentQuiz?.title ?? 'Quiz',
+          style: AppTypography.h3.copyWith(color: AppColors.white),
+        ),
+        backgroundColor: AppColors.primary,
+      ),
       body: quizProvider.isLoading || quizProvider.currentQuiz == null
           ? const LoadingSpinner()
           : quizProvider.quizResult != null
@@ -34,19 +67,31 @@ class QuizScreen extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Column(
               children: [
-                Text(quizProvider.currentQuiz!.title, style: AppTypography.h3.copyWith(color: AppColors.white)),
+                Text(
+                  quizProvider.currentQuiz!.title,
+                  style: AppTypography.h3.copyWith(color: AppColors.white),
+                ),
                 const SizedBox(height: 8),
-                Text('Q${quizProvider.currentQuestion + 1} / ${quizProvider.currentQuiz!.questions!.length}', style: AppTypography.body2.copyWith(color: AppColors.white)),
+                Text(
+                  'Q${quizProvider.currentQuestion + 1} / ${quizProvider.currentQuiz!.questions!.length}',
+                  style: AppTypography.body2.copyWith(color: AppColors.white),
+                ),
               ],
             ),
           ),
           if (quizProvider.error != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: Text(quizProvider.error!, style: AppTypography.body2.copyWith(color: AppColors.error)),
+              child: Text(
+                quizProvider.error!,
+                style: AppTypography.body2.copyWith(color: AppColors.error),
+              ),
             ),
           const SizedBox(height: 16),
           AppCard(
@@ -70,9 +115,15 @@ class QuizScreen extends StatelessWidget {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            border: Border.all(color: quizProvider.selectedAnswers[quizProvider.currentQuestion] == option ? AppColors.primary : AppColors.border),
+                            border: Border.all(
+                              color: quizProvider.selectedAnswers[quizProvider.currentQuestion] == option
+                                  ? AppColors.primary
+                                  : AppColors.borderLight,
+                            ),
                             borderRadius: BorderRadius.circular(10),
-                            color: quizProvider.selectedAnswers[quizProvider.currentQuestion] == option ? AppColors.primary.withOpacity(0.1) : null,
+                            color: quizProvider.selectedAnswers[quizProvider.currentQuestion] == option
+                                ? AppColors.primaryLight.withOpacity(0.1)
+                                : null,
                           ),
                           child: Text(option, style: AppTypography.body1),
                         ),
@@ -94,8 +145,11 @@ class QuizScreen extends StatelessWidget {
               ElevatedButton(
                 onPressed: quizProvider.canProceed && !quizProvider.isSubmitting
                     ? () {
-                  if (quizProvider.isLastQuestion) quizProvider.submitQuiz(quizId);
-                  else quizProvider.nextQuestion();
+                  if (quizProvider.isLastQuestion) {
+                    quizProvider.submitQuiz(quizId);
+                  } else {
+                    quizProvider.nextQuestion();
+                  }
                 }
                     : null,
                 child: Row(children: [Text(quizProvider.isLastQuestion ? 'Submit' : 'Next'), const Icon(Icons.chevron_right)]),
@@ -115,13 +169,26 @@ class QuizScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Quiz Completed', style: AppTypography.h3.copyWith(fontWeight: FontWeight.w600)),
+            Text(
+              'Quiz Completed',
+              style: AppTypography.h3.copyWith(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 16),
-            Text('Score: ${quizProvider.quizResult!.score} / ${quizProvider.quizResult!.total}', style: AppTypography.h4.copyWith(color: AppColors.primary)),
+            Text(
+              'Score: ${quizProvider.quizResult!.score} / ${quizProvider.quizResult!.total}',
+              style: AppTypography.h4.copyWith(color: AppColors.primary),
+            ),
             const SizedBox(height: 8),
-            Text(quizProvider.quizResult!.message, style: AppTypography.body1.copyWith(color: AppColors.textSecondary), textAlign: TextAlign.center),
+            Text(
+              quizProvider.quizResult!.message,
+              style: AppTypography.body1.copyWith(color: AppColors.textSecondary),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false), child: const Text('Back to Home')),
+            ElevatedButton(
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false),
+              child: const Text('Back to Home'),
+            ),
           ],
         ),
       ),

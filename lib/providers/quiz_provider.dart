@@ -65,8 +65,8 @@ class QuizProvider with ChangeNotifier {
         endpoint = '/quizzes/category/$category';
         if (difficulty != null) params['difficulty'] = difficulty;
       }
-      final response = await _apiService.get(endpoint, params: params);
-      _quizzes = (response as List).map((json) => Quiz.fromJson(json)).toList();
+      //final response = await _apiService.get(endpoint, params: params);
+      //_quizzes = (response as List).map((json) => Quiz.fromJson(json)).toList();
     } catch (e) {
       _error = e.toString();
     } finally {

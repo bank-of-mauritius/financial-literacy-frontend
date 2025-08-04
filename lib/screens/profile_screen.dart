@@ -23,19 +23,19 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
   late Animation<Offset> _slideAnimation;
 
   final List<Map<String, dynamic>> stats = [
-    {'label': 'Quizzes Completed', 'value': 15, 'icon': MdiIcons.medal, 'color': AppColors.primary, 'gradient': [Colors.blue.shade500, Colors.blue.shade700]},
-    {'label': 'Total Points', 'value': 1250, 'icon': MdiIcons.star, 'color': AppColors.secondary, 'gradient': [Colors.amber.shade400, Colors.amber.shade600]},
-    {'label': 'Learning Streak', 'value': '7 days', 'icon': MdiIcons.fire, 'color': AppColors.success, 'gradient': [Colors.orange.shade500, Colors.red.shade600]},
-    {'label': 'Articles Read', 'value': 23, 'icon': MdiIcons.bookOpenVariant, 'color': AppColors.text, 'gradient': [Colors.green.shade500, Colors.green.shade700]},
+    {'label': 'Quizzes Completed', 'value': 15, 'icon': MdiIcons.medal, 'color': AppColors.primary, 'gradient': [AppColors.primary, AppColors.primaryLight]},
+    {'label': 'Total Points', 'value': 1250, 'icon': MdiIcons.star, 'color': AppColors.secondary, 'gradient': [AppColors.secondary, AppColors.secondaryLight]},
+    {'label': 'Learning Streak', 'value': '7 days', 'icon': MdiIcons.fire, 'color': AppColors.success, 'gradient': [AppColors.success, AppColors.successLight]},
+    {'label': 'Articles Read', 'value': 23, 'icon': MdiIcons.bookOpenVariant, 'color': AppColors.text, 'gradient': [AppColors.accent, AppColors.accent.withOpacity(0.8)]},
   ];
 
   final List<Achievement> achievements = [
-    Achievement(id: 1, title: 'First Steps', description: 'Complete your first quiz', icon: 'trophy', earned: true, points: 50, color: '#FFD700'),
-    Achievement(id: 2, title: 'Knowledge Seeker', description: 'Read 10 articles', icon: 'school', earned: true, points: 100, color: '#10B981'),
-    Achievement(id: 3, title: 'Quiz Master', description: 'Complete 10 quizzes', icon: 'quiz', earned: true, points: 200, color: '#1A237E'),
-    Achievement(id: 4, title: 'Streak Champion', description: 'Maintain a 7-day learning streak', icon: 'fire', earned: true, points: 150, color: '#EF4444'),
-    Achievement(id: 5, title: 'Investment Guru', description: 'Complete all investing quizzes', icon: 'trending-up', earned: false, points: 300, color: '#3B82F6'),
-    Achievement(id: 6, title: 'Budget Pro', description: 'Master budgeting concepts', icon: 'wallet', earned: false, points: 250, color: '#10B981'),
+    Achievement(id: 1, title: 'First Steps', description: 'Complete your first quiz', icon: 'trophy', earned: true, points: 50, color: '#D4A017'),
+    Achievement(id: 2, title: 'Knowledge Seeker', description: 'Read 10 articles', icon: 'school', earned: true, points: 100, color: '#B2E4D5'),
+    Achievement(id: 3, title: 'Quiz Master', description: 'Complete 10 quizzes', icon: 'quiz', earned: true, points: 200, color: '#3B4C6B'),
+    Achievement(id: 4, title: 'Streak Champion', description: 'Maintain a 7-day learning streak', icon: 'fire', earned: true, points: 150, color: '#2B7A6B'),
+    Achievement(id: 5, title: 'Investment Guru', description: 'Complete all investing quizzes', icon: 'trending-up', earned: false, points: 300, color: '#A3BFFA'),
+    Achievement(id: 6, title: 'Budget Pro', description: 'Master budgeting concepts', icon: 'wallet', earned: false, points: 250, color: '#B2E4D5'),
   ];
 
   final List<Activity> recentActivity = [
@@ -122,7 +122,7 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
     final currentLevel = (user?.totalPoints ?? 0) ~/ 500 + 1;
 
     return SliverAppBar(
-      expandedHeight: 280, // Reduced from 320
+      expandedHeight: 280,
       pinned: true,
       backgroundColor: AppColors.primary,
       elevation: 0,
@@ -134,8 +134,8 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
               end: Alignment.bottomRight,
               colors: [
                 AppColors.primary,
-                AppColors.primary.withOpacity(0.8),
-                AppColors.secondary.withOpacity(0.3),
+                AppColors.primaryLight,
+                AppColors.secondaryLight.withOpacity(0.3),
               ],
             ),
           ),
@@ -145,15 +145,15 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 20), // Reduced from 40
+                  const SizedBox(height: 20),
                   // Profile Avatar with glow effect
                   Container(
-                    width: 80, // Reduced from 100
-                    height: 80, // Reduced from 100
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.7)],
+                      gradient: const LinearGradient(
+                        colors: [AppColors.secondary, AppColors.secondaryLight],
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -166,30 +166,30 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                     child: Center(
                       child: Text(
                         user?.name?.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
-                        style: AppTypography.h2.copyWith( // Reduced from h1
+                        style: AppTypography.h2.copyWith(
                           color: AppColors.white,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12), // Reduced from 16
+                  const SizedBox(height: 12),
                   // User Info
                   Text(
                     user?.name ?? 'User',
-                    style: AppTypography.h3.copyWith( // Reduced from h2
+                    style: AppTypography.h3.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     user?.email ?? 'email@example.com',
-                    style: AppTypography.body2.copyWith( // Reduced from body1
+                    style: AppTypography.body2.copyWith(
                       color: AppColors.white.withOpacity(0.8),
                     ),
                   ),
-                  const SizedBox(height: 12), // Reduced from 16
-                  // Edit Profile Button - Made more compact
+                  const SizedBox(height: 12),
+                  // Edit Profile Button
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.white.withOpacity(0.1),
@@ -210,8 +210,7 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16), // Reduced from 20
-                  // Level Progress - Made more compact
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -342,13 +341,13 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.accent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   _showAchievements ? 'Show Less' : 'See All',
                   style: AppTypography.caption.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.accent,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -379,11 +378,11 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
             width: 120,
             margin: const EdgeInsets.only(right: 16),
             decoration: BoxDecoration(
-              color: AppColors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: AppColors.gray.withOpacity(0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -450,15 +449,15 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
       children: achievements.map((achievement) {
         return Container(
           decoration: BoxDecoration(
-            color: achievement.earned ? AppColors.white : AppColors.white.withOpacity(0.5),
+            color: achievement.earned ? AppColors.surface : AppColors.surface.withOpacity(0.5),
             borderRadius: BorderRadius.circular(16),
             border: achievement.earned
                 ? null
-                : Border.all(color: AppColors.border),
+                : Border.all(color: AppColors.borderLight),
             boxShadow: achievement.earned
                 ? [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: AppColors.gray.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -541,11 +540,11 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.white,
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: AppColors.gray.withOpacity(0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -559,7 +558,7 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [AppColors.primary.withOpacity(0.1), AppColors.secondary.withOpacity(0.1)],
+                              colors: [AppColors.primaryLight.withOpacity(0.1), AppColors.secondaryLight.withOpacity(0.1)],
                             ),
                             shape: BoxShape.circle,
                           ),
@@ -594,8 +593,8 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Colors.green.shade500, Colors.green.shade600],
+                            gradient: const LinearGradient(
+                              colors: [AppColors.success, AppColors.successLight],
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -646,11 +645,11 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.gray.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -703,10 +702,10 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                     ),
                   ),
                   if (!isLast)
-                    Divider(
+                    const Divider(
                       height: 1,
                       indent: 60,
-                      color: AppColors.border,
+                      color: AppColors.borderLight,
                     ),
                 ],
               );
