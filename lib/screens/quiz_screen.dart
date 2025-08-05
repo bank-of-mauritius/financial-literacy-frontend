@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:financial_literacy_frontend/models/quiz.dart';
 import 'package:financial_literacy_frontend/providers/quiz_provider.dart';
 import 'package:financial_literacy_frontend/widgets/card.dart';
 import 'package:financial_literacy_frontend/widgets/loading_spinner.dart';

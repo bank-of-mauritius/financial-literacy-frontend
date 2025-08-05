@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
-import 'package:financial_literacy_frontend/models/quiz.dart';
 import 'package:financial_literacy_frontend/providers/quiz_provider.dart';
 import 'package:financial_literacy_frontend/styles/colors.dart';
 import 'package:financial_literacy_frontend/styles/typography.dart';
@@ -26,7 +25,7 @@ class DailyChallenge extends StatelessWidget {
           BoxShadow(
             color: AppColors.secondary.withOpacity(0.3),
             blurRadius: 12,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),

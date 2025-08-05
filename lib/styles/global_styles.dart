@@ -64,7 +64,7 @@ final ThemeData globalTheme = ThemeData(
   inputDecorationTheme: InputDecorationTheme(
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: AppColors.border),
+      borderSide: const BorderSide(color: AppColors.border),
     ),
     filled: true,
     fillColor: AppColors.surface,

@@ -98,11 +98,11 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                   child: Column(
                     children: [
                       _buildStatsSection(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       _buildAchievementsSection(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       _buildRecentActivitySection(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       _buildSettingsSection(authProvider),
                       const SizedBox(height: 80), // Space for bottom nav
                     ],
@@ -117,9 +117,6 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
   }
 
   Widget _buildSliverAppBar(User? user) {
-    final progress = (user?.totalPoints ?? 0) % 500 / 500;
-    final nextLevelPoints = ((user?.totalPoints ?? 0) ~/ 500 + 1) * 500;
-    final currentLevel = (user?.totalPoints ?? 0) ~/ 500 + 1;
 
     return SliverAppBar(
       expandedHeight: 280,
@@ -128,14 +125,14 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
                 AppColors.primary,
                 AppColors.primaryLight,
-                AppColors.secondaryLight.withOpacity(0.3),
+                AppColors.primaryDark,
               ],
             ),
           ),

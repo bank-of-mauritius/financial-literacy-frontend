@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:financial_literacy_frontend/models/quiz.dart';
 import 'package:financial_literacy_frontend/providers/quiz_provider.dart';
 import 'package:financial_literacy_frontend/styles/colors.dart';
 import 'package:financial_literacy_frontend/styles/typography.dart';

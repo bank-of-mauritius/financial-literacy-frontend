@@ -12,7 +12,7 @@ class Category {
 }
 
 class QuizProvider with ChangeNotifier {
-  List<Quiz> _quizzes = [];
+  final List<Quiz> _quizzes = [];
   Quiz? _currentQuiz;
   int _currentQuestion = 0;
   List<String?> _selectedAnswers = [];

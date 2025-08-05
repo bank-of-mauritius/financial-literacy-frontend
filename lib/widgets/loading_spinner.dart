@@ -7,7 +7,7 @@ class LoadingSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: SpinKitCircle(
         color: AppColors.primary,
         size: 50.0,

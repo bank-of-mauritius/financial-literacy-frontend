@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:financial_literacy_frontend/models/quiz.dart';
 import 'package:financial_literacy_frontend/models/user.dart';
 
 class ApiService {
@@ -28,7 +27,7 @@ class ApiService {
           ...?params,
         },
       );
-      final Map<String, String>? headers = isFmp ? {} : await _getHeaders();
+      final Map<String, String> headers = isFmp ? {} : await _getHeaders();
 
       final response = await http.get(uri, headers: headers);
 
