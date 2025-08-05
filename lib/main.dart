@@ -3,10 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:financial_literacy_frontend/providers/auth_provider.dart';
 import 'package:financial_literacy_frontend/providers/quiz_provider.dart';
 import 'package:financial_literacy_frontend/providers/chatbot_provider.dart';
+import 'package:financial_literacy_frontend/screens/welcome_screen.dart';
 import 'package:financial_literacy_frontend/screens/home_screen.dart';
 import 'package:financial_literacy_frontend/screens/quiz_screen.dart';
 import 'package:financial_literacy_frontend/screens/profile_screen.dart';
-import 'package:financial_literacy_frontend/screens/splash_screen.dart';
 import 'package:financial_literacy_frontend/styles/global_styles.dart';
 
 void main() {
@@ -29,7 +29,7 @@ class FinancialLiteracyApp extends StatelessWidget {
         theme: globalTheme,
         initialRoute: '/splash',
         routes: {
-          '/splash': (context) => const SplashScreen(),
+          '/splash': (context) => const WelcomeScreen(),
           '/home': (context) => const HomeScreen(),
           '/quiz': (context) => const QuizScreen(),
           '/profile': (context) => const ProfileScreen(),
