@@ -24,8 +24,7 @@ class HomeScreen extends StatefulWidget {
   HomeScreenState createState() => HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin {
+class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late AnimationController _floatingController;
@@ -708,8 +707,88 @@ class HomeScreenState extends State<HomeScreen>
                   );
                 },
               ),
-              const SizedBox(height: 100), // Space for bottom nav
+              const SizedBox(height: 120), // Increased to avoid overlap with nav bar
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingNavigationBar(QuizProvider quizProvider) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = max(mediaQuery.padding.bottom, 16.0);
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: bottomPadding,
+      child: Center(
+        child: Container(
+          width: 240, // Adjusted to fit 3 icons comfortably
+          height: bottomPadding + 64, // Height for icons + padding
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  offset: const Offset(0, 8),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    // Home is already selected, no action needed
+                  },
+                  child: Icon(
+                    Icons.home_rounded,
+                    color: AppColors.white,
+                    size: 28,
+                  ),
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/quiz',
+                      arguments: quizProvider.quizzes.isNotEmpty
+                          ? quizProvider.quizzes.first.id
+                          : 1,
+                    );
+                  },
+                  child: Icon(
+                    Icons.quiz_rounded,
+                    color: AppColors.white.withOpacity(0.7),
+                    size: 28,
+                  ),
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    Navigator.pushNamed(context, '/profile');
+                  },
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: AppColors.white.withOpacity(0.7),
+                    size: 28,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -723,53 +802,20 @@ class HomeScreenState extends State<HomeScreen>
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        controller: _scrollController,
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildModernAppBar(authProvider),
-          _buildModernContent(quizProvider),
+      body: Stack(
+        children: [
+          CustomScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _buildModernAppBar(authProvider),
+              _buildModernContent(quizProvider),
+            ],
+          ),
+          _buildFloatingNavigationBar(quizProvider),
         ],
       ),
       floatingActionButton: _buildModernFloatingActionButton(),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        indicatorColor: AppColors.accent.withOpacity(0.2),
-        elevation: 8,
-        shadowColor: AppColors.primary.withOpacity(0.1),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_rounded),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.quiz_rounded),
-            selectedIcon: Icon(Icons.quiz_rounded),
-            label: 'Quizzes',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
-        onDestinationSelected: (index) {
-          if (index == 1) {
-            Navigator.pushNamed(
-              context,
-              '/quiz',
-              arguments: quizProvider.quizzes.isNotEmpty
-                  ? quizProvider.quizzes.first.id
-                  : 1,
-            );
-          } else if (index == 2) {
-            Navigator.pushNamed(context, '/profile');
-          }
-        },
-      ),
     );
   }
 }
