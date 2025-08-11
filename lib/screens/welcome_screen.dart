@@ -175,10 +175,10 @@ class WelcomeScreenState extends State<WelcomeScreen>
                     alignment: Alignment.topRight,
                     child: TextButton(
                       onPressed: _skipToHome,
-                      child: Text(
+                      child: const Text(
                         'Skip',
                         style: TextStyle(
-                          color: AppColors.white.withOpacity(0.8),
+                          color: AppColors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
                         ),
@@ -228,7 +228,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
                               backgroundColor: AppColors.white,
                               foregroundColor: _slides[_currentPage].gradient[0],
                               elevation: 8,
-                              shadowColor: AppColors.white.withOpacity(0.3),
+                              shadowColor: AppColors.primaryLight.withOpacity(0.3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(28),
                               ),
@@ -239,6 +239,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
                                   : 'Next',
                               style: const TextStyle(
                                 fontSize: 18,
+                                color: AppColors.primaryDark,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

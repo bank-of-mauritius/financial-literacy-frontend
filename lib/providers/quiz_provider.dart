@@ -59,16 +59,14 @@ class QuizProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      String endpoint = '/quizzes';
-      Map<String, dynamic> params = {};
-      if (category != null) {
-        endpoint = '/quizzes/category/$category';
-        if (difficulty != null) params['difficulty'] = difficulty;
-      }
-      //final response = await _apiService.get(endpoint, params: params);
-      //_quizzes = (response as List).map((json) => Quiz.fromJson(json)).toList();
+      final quizzes = await _apiService.getQuizzes(category: category, difficulty: difficulty);
+      _quizzes.clear();
+      _quizzes.addAll(quizzes);
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        print('Error fetching quizzes: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -80,13 +78,16 @@ class QuizProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final response = await _apiService.get('/quizzes/$quizId');
-      _currentQuiz = Quiz.fromJson(response);
-      _selectedAnswers = List<String?>.filled(_currentQuiz!.questions!.length, null);
+      final quiz = await _apiService.getQuizById(quizId);
+      _currentQuiz = quiz;
+      _selectedAnswers = List<String?>.filled(quiz.questions?.length ?? 0, null);
       _currentQuestion = 0;
       _quizResult = null;
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        print('Error fetching quiz: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -94,18 +95,43 @@ class QuizProvider with ChangeNotifier {
   }
 
   Future<void> submitQuiz(int quizId) async {
+    if (_currentQuiz == null) {
+      _error = 'No quiz loaded';
+      notifyListeners();
+      return;
+    }
+
     _isSubmitting = true;
     _error = null;
     notifyListeners();
+
     try {
-      final response = await _apiService.post('/quizzes/$quizId/submit', {
-        'answers': _selectedAnswers,
-      });
-      _quizResult = QuizResult.fromJson(response);
-      _userProgress['totalPoints'] += response['score'] ?? 0;
-      _userProgress['completedQuizzes'] += 1;
+      final response = await _apiService.submitQuiz(quizId, _selectedAnswers);
+
+      // Create QuizResult from response - now using the unified QuizResult class
+      _quizResult = QuizResult(
+        score: response['score'] ?? 0,
+        total: response['total'] ?? _selectedAnswers.length,
+        message: response['message'] ?? 'Quiz completed!',
+        percentage: response['percentage']?.toDouble() ??
+            ((response['score'] ?? 0) / (response['total'] ?? 1) * 100),
+        passed: response['passed'] ?? ((response['score'] ?? 0) >= (response['total'] ?? 1) * 0.6),
+      );
+
+      // Update user progress
+      if (response['score'] != null) {
+        _userProgress['totalPoints'] = (_userProgress['totalPoints'] ?? 0) + response['score'];
+        _userProgress['completedQuizzes'] = (_userProgress['completedQuizzes'] ?? 0) + 1;
+      }
+
+      if (kDebugMode) {
+        print('Quiz submitted successfully: ${response['score']}/${response['total']}');
+      }
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        print('Error submitting quiz: $e');
+      }
     } finally {
       _isSubmitting = false;
       notifyListeners();
@@ -117,10 +143,13 @@ class QuizProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final response = await _apiService.get('/user/progress');
+      final response = await _apiService.getUserProgress();
       _userProgress = response;
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        print('Error fetching user progress: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -132,10 +161,13 @@ class QuizProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final response = await _apiService.get('/quizzes/leaderboard');
+      final response = await _apiService.getLeaderboard();
       _leaderboard = response;
     } catch (e) {
       _error = e.toString();
+      if (kDebugMode) {
+        print('Error fetching leaderboard: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -144,19 +176,22 @@ class QuizProvider with ChangeNotifier {
 
   void startQuiz(Quiz quiz) {
     _currentQuiz = quiz;
-    _selectedAnswers = List<String?>.filled(quiz.questions!.length, null);
+    _selectedAnswers = List<String?>.filled(quiz.questions?.length ?? 0, null);
     _currentQuestion = 0;
     _quizResult = null;
+    _error = null;
     notifyListeners();
   }
 
   void selectAnswer(String answer) {
-    _selectedAnswers[_currentQuestion] = answer;
-    notifyListeners();
+    if (_currentQuestion >= 0 && _currentQuestion < _selectedAnswers.length) {
+      _selectedAnswers[_currentQuestion] = answer;
+      notifyListeners();
+    }
   }
 
   void nextQuestion() {
-    if (_currentQuestion < _currentQuiz!.questions!.length - 1) {
+    if (_currentQuiz != null && _currentQuestion < _currentQuiz!.questions!.length - 1) {
       _currentQuestion++;
       notifyListeners();
     }
@@ -174,11 +209,23 @@ class QuizProvider with ChangeNotifier {
     _currentQuestion = 0;
     _selectedAnswers = [];
     _quizResult = null;
+    _error = null;
     notifyListeners();
   }
 
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Initialize with sample data if needed
+  void initializeSampleData() {
+    if (_quizzes.isEmpty) {
+      // Add some sample quizzes for testing
+      // This can be removed once backend is fully connected
+      if (kDebugMode) {
+        print('Initializing sample quiz data');
+      }
+    }
   }
 }
