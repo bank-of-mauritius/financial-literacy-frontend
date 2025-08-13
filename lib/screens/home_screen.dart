@@ -29,13 +29,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late AnimationController _floatingController;
   late AnimationController _headerController;
+  late AnimationController _notificationController;
 
   late Animation<double> _fadeAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _floatingAnimation;
   late Animation<double> _headerSlideAnimation;
+  late Animation<double> _notificationSlideAnimation;
 
   final ScrollController _scrollController = ScrollController();
+  bool _showNotification = false;
 
   List<Map<String, dynamic>> economicData = [];
   bool isLoadingMarketData = false;
@@ -49,6 +52,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _initializeAnimations();
     _setupScrollListener();
     _fetchMarketData();
+    _triggerNotification();
   }
 
   void _initializeAnimations() {
@@ -72,6 +76,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
     );
 
+    _notificationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeOutExpo,
@@ -90,6 +99,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeOutCubic,
     );
 
+    _notificationSlideAnimation = Tween<double>(begin: -100, end: 0).animate(
+      CurvedAnimation(parent: _notificationController, curve: Curves.easeOutBack),
+    );
+
     _fadeController.forward();
     _pulseController.repeat(reverse: true);
     _floatingController.repeat(reverse: true);
@@ -105,12 +118,35 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
+  void _triggerNotification() {
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showNotification = true;
+          _notificationController.forward();
+        });
+        Future.delayed(const Duration(seconds: 15), () {
+          if (mounted) {
+            setState(() {
+              _notificationController.reverse().then((_) {
+                setState(() {
+                  _showNotification = false;
+                });
+              });
+            });
+          }
+        });
+      }
+    });
+  }
+
   @override
   void dispose() {
     _fadeController.dispose();
     _pulseController.dispose();
     _floatingController.dispose();
     _headerController.dispose();
+    _notificationController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -129,47 +165,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         isLoadingMarketData = false;
       });
       return;
-    }
-
-    try {
-      final apiService = ApiService();
-      final List<dynamic> marketData = await apiService.fetchMarketData('^GSPC,^IXIC');
-
-      if (marketData.isEmpty) {
-        throw Exception('Empty market data response');
-      }
-
-      final List<Map<String, dynamic>> tempData = [];
-      for (var item in marketData) {
-        final symbol = item['symbol'] as String;
-        final price = double.parse(item['price'].toString());
-        final changePercent = double.parse(item['changesPercentage'].toString()).toStringAsFixed(2);
-        final isPositive = item['changesPercentage'] >= 0;
-
-        tempData.add({
-          'symbol': symbol == '^GSPC' ? 'S&P 500' : 'NASDAQ',
-          'value': price.toStringAsFixed(2),
-          'change': '$changePercent%',
-          'positive': isPositive,
-        });
-      }
-
-      await prefs.setInt('market_data_time', DateTime.now().millisecondsSinceEpoch);
-      await prefs.setString('market_data', jsonEncode(tempData));
-
-      setState(() {
-        economicData = tempData;
-        isLoadingMarketData = false;
-      });
-    } catch (e) {
-      setState(() {
-        marketDataError = 'Failed to load market data: $e';
-        isLoadingMarketData = false;
-        economicData = [
-          {'symbol': 'S&P 500', 'value': '4,823.52', 'change': '+1.2%', 'positive': true},
-          {'symbol': 'NASDAQ', 'value': '15,180.43', 'change': '+0.8%', 'positive': true},
-        ];
-      });
     }
   }
 
@@ -600,118 +595,218 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildNotificationWidget() {
+    return AnimatedBuilder(
+      animation: _notificationController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _notificationSlideAnimation.value),
+          child: FadeTransition(
+            opacity: _notificationController,
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _notificationController.reverse().then((_) {
+                    setState(() {
+                      _showNotification = false;
+                    });
+                  });
+                });
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.secondary, AppColors.secondaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.secondary.withOpacity(0.4),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Do you know?',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Transform.scale(
+                          scale: 1 + (sin(_notificationController.value * 2 * pi) * 0.1),
+                          child: Icon(
+                            Icons.lightbulb_outline,
+                            color: AppColors.white.withOpacity(0.8),
+                            size: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'The Bank of Mauritius has launched a new bond offering a 3.5% quarterly yield!',
+                      style: AppTypography.body2.copyWith(
+                        color: AppColors.white.withOpacity(0.9),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _notificationController.reverse().then((_) {
+                              setState(() {
+                                _showNotification = false;
+                              });
+                            });
+                          });
+                        },
+                        child: Text(
+                          'Got it!',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildModernContent(QuizProvider quizProvider) {
     return SliverToBoxAdapter(
       child: quizProvider.isLoading
           ? const LoadingSpinner()
           : FadeTransition(
-        opacity: _fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 600),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: EconomicIndicators(
-                        economicData: economicData,
-                        isLoading: isLoadingMarketData,
-                        error: marketDataError,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 800),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: QuickActions(
-                        onQuizTap: () {
-                          Navigator.pushNamed(
-                            context,
-                            '/quiz',
-                            arguments: quizProvider.quizzes.isNotEmpty
-                                ? quizProvider.quizzes.first.id
-                                : 1,
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 1000),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: DailyChallenge(quizProvider: quizProvider),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 1200),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: RecentAchievements(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 1400),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: const QuickStats(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 28),
-              TweenAnimationBuilder(
-                duration: const Duration(milliseconds: 1600),
-                tween: Tween<double>(begin: 0, end: 1),
-                builder: (context, value, child) {
-                  return Transform.translate(
-                    offset: Offset(0, 50 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: FeaturedQuizzes(quizProvider: quizProvider),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 120), // Increased to avoid overlap with nav bar
-            ],
+          opacity: _fadeAnimation,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+                children: [
+            TweenAnimationBuilder(
+            duration: const Duration(milliseconds: 600),
+            tween: Tween<double>(begin: 0, end: 1),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 50 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: EconomicIndicators(
+                    economicData: economicData,
+                    isLoading: isLoadingMarketData,
+                    error: marketDataError,
+                  ),
+                ),
+              );
+            },
           ),
-        ),
+          const SizedBox(height: 28),
+          TweenAnimationBuilder(
+            duration: const Duration(milliseconds: 800),
+            tween: Tween<double>(begin: 0, end: 1),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 50 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: QuickActions(
+                    onQuizTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/quiz',
+                        arguments: quizProvider.quizzes.isNotEmpty
+                            ? quizProvider.quizzes.first.id
+                            : 1,
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 28),
+          TweenAnimationBuilder(
+            duration: const Duration(milliseconds: 1000),
+            tween: Tween<double>(begin: 0, end: 1),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 50 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: DailyChallenge(quizProvider: quizProvider),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 28),
+          TweenAnimationBuilder(
+            duration: const Duration(milliseconds: 1200),
+            tween: Tween<double>(begin: 0, end: 1),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 50 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: RecentAchievements(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 28),
+      TweenAnimationBuilder(
+        duration: const Duration(milliseconds: 1400),
+        tween: Tween<double>(begin: 0, end: 1),
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 50 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: const QuickStats(),
+            ),
+          );
+        },
       ),
+      const SizedBox(height: 28),
+      TweenAnimationBuilder(
+        duration: const Duration(milliseconds: 1600),
+        tween: Tween<double>(begin: 0, end: 1),
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 50 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: FeaturedQuizzes(quizProvider: quizProvider),
+            ),
+          );
+        },
+      ),
+      const SizedBox(height: 120), // Increased to avoid overlap with nav bar
+      ],
+    ),
+    ),
+    ),
     );
   }
 
@@ -813,6 +908,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           _buildFloatingNavigationBar(quizProvider),
+          if (_showNotification)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _buildNotificationWidget(),
+            ),
         ],
       ),
       floatingActionButton: _buildModernFloatingActionButton(),
