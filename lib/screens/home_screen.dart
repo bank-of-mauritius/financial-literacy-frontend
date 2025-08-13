@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:financial_literacy_frontend/providers/quiz_provider.dart';
 import 'package:financial_literacy_frontend/providers/auth_provider.dart';
-import 'package:financial_literacy_frontend/services/api_service.dart';
 import 'package:financial_literacy_frontend/styles/colors.dart';
 import 'package:financial_literacy_frontend/styles/typography.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:financial_literacy_frontend/widgets/economic_indicators.dart';
 import 'package:financial_literacy_frontend/widgets/quick_actions.dart';
 import 'package:financial_literacy_frontend/widgets/daily_challenge.dart';
@@ -14,8 +12,11 @@ import 'package:financial_literacy_frontend/widgets/quick_stats.dart';
 import 'package:financial_literacy_frontend/widgets/featured_quizzes.dart';
 import 'package:financial_literacy_frontend/widgets/loading_spinner.dart';
 import 'chatbot_screen.dart';
-import 'dart:convert';
+import 'bank_map_screen.dart';
 import 'dart:math';
+import 'package:geolocator/geolocator.dart';
+import '../services/database_helper.dart';
+import '../models/bank_location.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,16 +30,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
   late AnimationController _floatingController;
   late AnimationController _headerController;
-  late AnimationController _notificationController;
 
   late Animation<double> _fadeAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _floatingAnimation;
   late Animation<double> _headerSlideAnimation;
-  late Animation<double> _notificationSlideAnimation;
 
   final ScrollController _scrollController = ScrollController();
-  bool _showNotification = false;
 
   List<Map<String, dynamic>> economicData = [];
   bool isLoadingMarketData = false;
@@ -46,13 +44,16 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   double _scrollOffset = 0;
   bool _isHeaderExpanded = true;
 
+  // Add these new variables for bank/ATM features
+  List<BankLocation> _nearbyBanks = [];
+  bool _isLoadingNearbyBanks = false;
+
   @override
   void initState() {
     super.initState();
     _initializeAnimations();
     _setupScrollListener();
-    _fetchMarketData();
-    _triggerNotification();
+    _loadNearbyBanks();
   }
 
   void _initializeAnimations() {
@@ -76,11 +77,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
     );
 
-    _notificationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
     _fadeAnimation = CurvedAnimation(
       parent: _fadeController,
       curve: Curves.easeOutExpo,
@@ -99,10 +95,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeOutCubic,
     );
 
-    _notificationSlideAnimation = Tween<double>(begin: -100, end: 0).animate(
-      CurvedAnimation(parent: _notificationController, curve: Curves.easeOutBack),
-    );
-
     _fadeController.forward();
     _pulseController.repeat(reverse: true);
     _floatingController.repeat(reverse: true);
@@ -118,54 +110,350 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  void _triggerNotification() {
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _showNotification = true;
-          _notificationController.forward();
-        });
-        Future.delayed(const Duration(seconds: 15), () {
-          if (mounted) {
-            setState(() {
-              _notificationController.reverse().then((_) {
-                setState(() {
-                  _showNotification = false;
-                });
-              });
-            });
-          }
-        });
-      }
-    });
-  }
-
   @override
   void dispose() {
     _fadeController.dispose();
     _pulseController.dispose();
     _floatingController.dispose();
     _headerController.dispose();
-    _notificationController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchMarketData() async {
+  Future<void> _loadNearbyBanks() async {
     setState(() {
-      isLoadingMarketData = true;
-      marketDataError = null;
+      _isLoadingNearbyBanks = true;
     });
 
-    final prefs = await SharedPreferences.getInstance();
-    final cachedData = prefs.getString('market_data');
-    if (cachedData != null) {
+    try {
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium,
+        );
+      } catch (e) {
+        // Use default location (Port Louis) if GPS fails
+        position = Position(
+          latitude: -20.1609,
+          longitude: 57.5012,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+      }
+
+      final dbHelper = DatabaseHelper();
+      final nearbyLocations = await dbHelper.getNearbyLocations(
+        position.latitude,
+        position.longitude,
+        5.0, // 5km radius
+      );
+
       setState(() {
-        economicData = List<Map<String, dynamic>>.from(jsonDecode(cachedData));
-        isLoadingMarketData = false;
+        _nearbyBanks = nearbyLocations.take(3).toList(); // Show top 3 nearest
+        _isLoadingNearbyBanks = false;
       });
-      return;
+    } catch (e) {
+      setState(() {
+        _isLoadingNearbyBanks = false;
+      });
     }
+  }
+
+  // Add this new method to build the nearby banks widget
+  Widget _buildNearbyBanksCard() {
+    return TweenAnimationBuilder(
+        duration: const Duration(milliseconds: 1800),
+        tween: Tween<double>(begin: 0, end: 1),
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, 50 * (1 - value)),
+            child: Opacity(
+              opacity: value,
+              child: Container(
+                // Remove horizontal margin to match other widgets' width
+                // margin: const EdgeInsets.symmetric(horizontal: 20), // Removed
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.success.withOpacity(0.1),
+                      AppColors.primary.withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.success.withOpacity(0.2),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.success.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      AppColors.success,
+                                      AppColors.success.withOpacity(0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.account_balance,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Banks & ATMs',
+                                      style: AppTypography.h4.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.text,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    Text(
+                                      'Find nearby banking services',
+                                      style: AppTypography.body2.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const BankMapScreen(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.success,
+                                  AppColors.success.withOpacity(0.8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'View Map',
+                                  style: AppTypography.caption.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_forward,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    if (_isLoadingNearbyBanks)
+                      const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    else
+                      if (_nearbyBanks.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.background,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Enable location to find nearby banks and ATMs',
+                                  style: AppTypography.body2.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Column(
+                          children: [
+                            ...(_nearbyBanks.take(3).map((bank) =>
+                                _buildBankItem(bank))),
+                            if (_nearbyBanks.length > 3)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 12),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (
+                                            context) => const BankMapScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    'View ${_nearbyBanks.length -
+                                        3} more locations',
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+    );
+  }
+
+  Widget _buildBankItem(BankLocation bank) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.border.withOpacity(0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: bank.type == 'bank'
+                  ? AppColors.success.withOpacity(0.1)
+                  : AppColors.secondary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              bank.type == 'bank'
+                  ? Icons.account_balance
+                  : Icons.local_atm,
+              color: bank.type == 'bank'
+                  ? AppColors.success
+                  : AppColors.secondary,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bank.name,
+                  style: AppTypography.body1.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  bank.address,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (bank.workingHours != null)
+                  Text(
+                    bank.workingHours!,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              bank.type.toUpperCase(),
+              style: AppTypography.caption.copyWith(
+                color: AppColors.success,
+                fontWeight: FontWeight.w600,
+                fontSize: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   String _getGreeting() {
@@ -595,218 +883,121 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildNotificationWidget() {
-    return AnimatedBuilder(
-      animation: _notificationController,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _notificationSlideAnimation.value),
-          child: FadeTransition(
-            opacity: _notificationController,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _notificationController.reverse().then((_) {
-                    setState(() {
-                      _showNotification = false;
-                    });
-                  });
-                });
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.secondary, AppColors.secondaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.secondary.withOpacity(0.4),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Do you know?',
-                          style: AppTypography.h4.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Transform.scale(
-                          scale: 1 + (sin(_notificationController.value * 2 * pi) * 0.1),
-                          child: Icon(
-                            Icons.lightbulb_outline,
-                            color: AppColors.white.withOpacity(0.8),
-                            size: 24,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'The Bank of Mauritius has launched a new bond offering a 3.5% quarterly yield!',
-                      style: AppTypography.body2.copyWith(
-                        color: AppColors.white.withOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _notificationController.reverse().then((_) {
-                              setState(() {
-                                _showNotification = false;
-                              });
-                            });
-                          });
-                        },
-                        child: Text(
-                          'Got it!',
-                          style: AppTypography.caption.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildModernContent(QuizProvider quizProvider) {
     return SliverToBoxAdapter(
       child: quizProvider.isLoading
           ? const LoadingSpinner()
           : FadeTransition(
-          opacity: _fadeAnimation,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-                children: [
-            TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 600),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: EconomicIndicators(
-                    economicData: economicData,
-                    isLoading: isLoadingMarketData,
-                    error: marketDataError,
-                  ),
-                ),
-              );
-            },
+        opacity: _fadeAnimation,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 600),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: EconomicIndicators(
+                        economicData: economicData,
+                        isLoading: isLoadingMarketData,
+                        error: marketDataError,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 800),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: QuickActions(
+                        onQuizTap: () {
+                          Navigator.pushNamed(
+                            context,
+                            '/quiz',
+                            arguments: quizProvider.quizzes.isNotEmpty
+                                ? quizProvider.quizzes.first.id
+                                : 1,
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              // Add the nearby banks card here
+              _buildNearbyBanksCard(),
+              const SizedBox(height: 28),
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 1000),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: DailyChallenge(quizProvider: quizProvider),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 1200),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: RecentAchievements(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 1400),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: const QuickStats(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 28),
+              TweenAnimationBuilder(
+                duration: const Duration(milliseconds: 1600),
+                tween: Tween<double>(begin: 0, end: 1),
+                builder: (context, value, child) {
+                  return Transform.translate(
+                    offset: Offset(0, 50 * (1 - value)),
+                    child: Opacity(
+                      opacity: value,
+                      child: FeaturedQuizzes(quizProvider: quizProvider),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 120), // Increased to avoid overlap with nav bar
+            ],
           ),
-          const SizedBox(height: 28),
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 800),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: QuickActions(
-                    onQuizTap: () {
-                      Navigator.pushNamed(
-                        context,
-                        '/quiz',
-                        arguments: quizProvider.quizzes.isNotEmpty
-                            ? quizProvider.quizzes.first.id
-                            : 1,
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 28),
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 1000),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: DailyChallenge(quizProvider: quizProvider),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 28),
-          TweenAnimationBuilder(
-            duration: const Duration(milliseconds: 1200),
-            tween: Tween<double>(begin: 0, end: 1),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 50 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: RecentAchievements(),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 28),
-      TweenAnimationBuilder(
-        duration: const Duration(milliseconds: 1400),
-        tween: Tween<double>(begin: 0, end: 1),
-        builder: (context, value, child) {
-          return Transform.translate(
-            offset: Offset(0, 50 * (1 - value)),
-            child: Opacity(
-              opacity: value,
-              child: const QuickStats(),
-            ),
-          );
-        },
+        ),
       ),
-      const SizedBox(height: 28),
-      TweenAnimationBuilder(
-        duration: const Duration(milliseconds: 1600),
-        tween: Tween<double>(begin: 0, end: 1),
-        builder: (context, value, child) {
-          return Transform.translate(
-            offset: Offset(0, 50 * (1 - value)),
-            child: Opacity(
-              opacity: value,
-              child: FeaturedQuizzes(quizProvider: quizProvider),
-            ),
-          );
-        },
-      ),
-      const SizedBox(height: 120), // Increased to avoid overlap with nav bar
-      ],
-    ),
-    ),
-    ),
     );
   }
 
@@ -820,8 +1011,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       bottom: bottomPadding,
       child: Center(
         child: Container(
-          width: 240, // Adjusted to fit 3 icons comfortably
-          height: bottomPadding + 64, // Height for icons + padding
+          width: 240,
+          height: bottomPadding + 64,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Container(
             decoration: BoxDecoration(
@@ -848,7 +1039,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onTap: () {
                     // Home is already selected, no action needed
                   },
-                  child: Icon(
+                  child: const Icon(
                     Icons.home_rounded,
                     color: AppColors.white,
                     size: 28,
@@ -908,13 +1099,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ],
           ),
           _buildFloatingNavigationBar(quizProvider),
-          if (_showNotification)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: _buildNotificationWidget(),
-            ),
         ],
       ),
       floatingActionButton: _buildModernFloatingActionButton(),

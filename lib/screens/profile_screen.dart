@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:financial_literacy_frontend/models/user.dart';
 import 'package:financial_literacy_frontend/providers/auth_provider.dart';
-import 'package:financial_literacy_frontend/widgets/card.dart';
 import 'package:financial_literacy_frontend/widgets/loading_spinner.dart';
 import 'package:financial_literacy_frontend/styles/colors.dart';
 import 'package:financial_literacy_frontend/styles/typography.dart';
@@ -162,7 +161,7 @@ class ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMi
                     ),
                     child: Center(
                       child: Text(
-                        user?.name?.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
+                        user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'U',
                         style: AppTypography.h2.copyWith(
                           color: AppColors.white,
                           fontWeight: FontWeight.bold,
