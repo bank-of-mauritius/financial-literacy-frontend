@@ -176,8 +176,6 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Opacity(
               opacity: value,
               child: Container(
-                // Remove horizontal margin to match other widgets' width
-                // margin: const EdgeInsets.symmetric(horizontal: 20), // Removed
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
