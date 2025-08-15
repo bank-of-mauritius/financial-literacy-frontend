@@ -3,6 +3,7 @@ import 'package:material_design_icons_flutter/material_design_icons_flutter.dart
 import 'package:financial_literacy_frontend/styles/colors.dart';
 import 'package:financial_literacy_frontend/styles/typography.dart';
 import '../screens/market_indicators_screen.dart';
+import '../screens/learn_screen.dart';
 
 class QuickActions extends StatelessWidget {
   final VoidCallback onQuizTap;
@@ -46,12 +47,10 @@ class QuickActions extends StatelessWidget {
         onQuizTap();
         break;
       case 'learn':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Learning section coming soon!'),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const LearnScreen(),
           ),
         );
         break;

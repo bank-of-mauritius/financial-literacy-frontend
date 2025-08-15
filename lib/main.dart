@@ -1,4 +1,5 @@
 import 'package:financial_literacy_frontend/screens/bank_map_screen.dart';
+import 'package:financial_literacy_frontend/screens/learn_screen.dart'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:financial_literacy_frontend/providers/auth_provider.dart';
@@ -35,6 +36,7 @@ class FinancialLiteracyApp extends StatelessWidget {
           '/quiz': (context) => const QuizScreen(),
           '/profile': (context) => const ProfileScreen(),
           '/bank-map': (context) => const BankMapScreen(),
+          '/learn': (context) => const LearnScreen(),
         },
       ),
     );
